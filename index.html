@@ -7,17 +7,25 @@
       body {
         margin: 0;
         font-family: 'Roboto', sans-serif;
+        overflow: hidden; /* disable scroll initially */
         background-color: #f5f5f5;
         color: #222;
       }
 
-      .welcome {
+      section {
         height: 100vh;
         display: flex;
         flex-direction: column;
         justify-content: center;
         align-items: center;
         text-align: center;
+        opacity: 1;
+        transition: opacity 1.5s ease;
+      }
+
+      .fade-out {
+        opacity: 0;
+        pointer-events: none;
       }
 
       .welcome h2 {
@@ -33,9 +41,20 @@
       }
 
       .dashboard {
-        min-height: 100vh;
-        text-align: center;
-        padding-top: 80px;
+        display: none;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .dashboard.show {
+        display: flex;
+        animation: fadeIn 1.5s ease forwards;
+      }
+
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
       }
 
       .dashboard h1 {
@@ -52,14 +71,14 @@
     </style>
   </head>
   <body>
-    <!-- Intro section -->
-    <section class="welcome">
+    <!-- Intro -->
+    <section class="welcome" id="welcome">
       <h2>Welcome to</h2>
       <h1>Im-Plant</h1>
     </section>
 
-    <!-- Dashboard section -->
-    <section class="dashboard">
+    <!-- Dashboard -->
+    <section class="dashboard" id="dashboard">
       <h1>Smart Garden Dashboard</h1>
       <p>Temperature: <span id="temp"></span> °C</p>
       <p>Humidity: <span id="hum"></span> %</p>
@@ -68,6 +87,7 @@
     </section>
 
     <script>
+      // Firebase
       const firebaseConfig = {
         apiKey: "AIzaSyA2lx9dz9n_U3yjGzedewfYx_zHRp-qKRY",
         databaseURL: "https://im-plant-bracu-default-rtdb.asia-southeast1.firebasedatabase.app/"
@@ -82,6 +102,19 @@
         document.getElementById("soil").textContent = data.soil;
         document.getElementById("light").textContent = data.light;
       });
+
+      // Fade transition
+      setTimeout(() => {
+        const welcome = document.getElementById("welcome");
+        const dashboard = document.getElementById("dashboard");
+
+        welcome.classList.add("fade-out");
+        setTimeout(() => {
+          welcome.style.display = "none";
+          dashboard.classList.add("show");
+          document.body.style.overflow = "hidden"; // keep scroll locked
+        }, 1500);
+      }, 2000); // show welcome for 2 seconds
     </script>
   </body>
 </html>
