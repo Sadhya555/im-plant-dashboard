@@ -1,0 +1,30 @@
+<html>
+  <head>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  </head>
+  <body>
+    <h2>Smart Garden Dashboard</h2>
+    <p>Temperature: <span id="temp"></span> °C</p>
+    <p>Humidity: <span id="hum"></span> %</p>
+    <p>Soil: <span id="soil"></span></p>
+    <p>Light: <span id="light"></span> lx</p>
+
+    <script>
+      const firebaseConfig = {
+        apiKey: "AIzaSyA2lx9dz9n_U3yjGzedewfYx_zHRp-qKRY",
+        databaseURL: "https://im-plant-bracu-default-rtdb.asia-southeast1.firebasedatabase.app/"
+      };
+      const app = firebase.initializeApp(firebaseConfig);
+      const db = firebase.database();
+
+      db.ref("/garden").on("value", snapshot => {
+        const data = snapshot.val();
+        document.getElementById("temp").textContent = data.temperature;
+        document.getElementById("hum").textContent = data.humidity;
+        document.getElementById("soil").textContent = data.soil;
+        document.getElementById("light").textContent = data.light;
+      });
+    </script>
+  </body>
+</html>
