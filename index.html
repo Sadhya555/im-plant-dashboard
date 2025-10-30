@@ -1,14 +1,26 @@
 <html>
   <head>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+      body {
+        font-family: 'Roboto', sans-serif;
+      }
+      h2 {
+        font-weight: 700;
+      }
+      p {
+        font-weight: 400;
+      }
+    </style>
   </head>
   <body>
     <h2>Smart Garden Dashboard</h2>
-    <p>Temperature: <span id="temp"></span> °C</p>
-    <p>Humidity: <span id="hum"></span> %</p>
-    <p>Soil: <span id="soil"></span></p>
-    <p>Light: <span id="light"></span> lx</p>
+    <p>Temperature: <span id="temp"> </span> °C</p>
+    <p>Humidity: <span id="hum"> </span> %</p>
+    <p>Soil: <span id="soil"> </span></p>
+    <p>Light: <span id="light"> </span> lx</p>
 
     <script>
       const firebaseConfig = {
