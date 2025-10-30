@@ -7,7 +7,7 @@
       body {
         margin: 0;
         font-family: 'Roboto', sans-serif;
-        overflow: hidden; /* disable scroll initially */
+        overflow: hidden; /* prevent scroll */
         background-color: #f5f5f5;
         color: #222;
       }
@@ -19,8 +19,12 @@
         justify-content: center;
         align-items: center;
         text-align: center;
+        opacity: 0;
+        transition: opacity 1s ease;
+      }
+
+      .fade-in {
         opacity: 1;
-        transition: opacity 0.50s ease;
       }
 
       .fade-out {
@@ -49,7 +53,7 @@
 
       .dashboard.show {
         display: flex;
-        animation: fadeIn 0.50s ease forwards;
+        animation: fadeIn 1s ease forwards;
       }
 
       @keyframes fadeIn {
@@ -87,7 +91,7 @@
     </section>
 
     <script>
-      // Firebase
+      // Firebase setup
       const firebaseConfig = {
         apiKey: "AIzaSyA2lx9dz9n_U3yjGzedewfYx_zHRp-qKRY",
         databaseURL: "https://im-plant-bracu-default-rtdb.asia-southeast1.firebasedatabase.app/"
@@ -103,18 +107,30 @@
         document.getElementById("light").textContent = data.light;
       });
 
-      // Fade transition
-      setTimeout(() => {
-        const welcome = document.getElementById("welcome");
-        const dashboard = document.getElementById("dashboard");
+      // Elements
+      const welcome = document.getElementById("welcome");
+      const dashboard = document.getElementById("dashboard");
 
-        welcome.classList.add("fade-out");
-        setTimeout(() => {
-          welcome.style.display = "none";
-          dashboard.classList.add("show");
-          document.body.style.overflow = "hidden"; // keep scroll locked
-        }, 1500);
-      }, 2000); // show welcome for 2 seconds
+      // Fade in on load
+      window.addEventListener("load", () => {
+        setTimeout(() => welcome.classList.add("fade-in"), 100);
+      });
+
+      // Trigger fade out on any user input
+      function transitionToDashboard() {
+        if (!welcome.classList.contains("fade-out")) {
+          welcome.classList.add("fade-out");
+          setTimeout(() => {
+            welcome.style.display = "none";
+            dashboard.classList.add("show");
+          }, 1500);
+        }
+      }
+
+      // Listen for user actions
+      ["wheel", "touchstart", "keydown", "click"].forEach(evt =>
+        window.addEventListener(evt, transitionToDashboard, { once: true })
+      );
     </script>
   </body>
 </html>
