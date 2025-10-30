@@ -5,22 +5,67 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
       body {
+        margin: 0;
         font-family: 'Roboto', sans-serif;
+        background-color: #f5f5f5;
+        color: #222;
       }
-      h2 {
-        font-weight: 700;
+
+      .welcome {
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
       }
-      p {
+
+      .welcome h2 {
         font-weight: 400;
+        font-size: 28px;
+        margin: 0;
+      }
+
+      .welcome h1 {
+        font-weight: 700;
+        font-size: 96px;
+        margin: 10px 0 0 0;
+      }
+
+      .dashboard {
+        min-height: 100vh;
+        text-align: center;
+        padding-top: 80px;
+      }
+
+      .dashboard h1 {
+        font-size: 60px;
+        font-weight: 700;
+        margin-bottom: 30px;
+      }
+
+      .dashboard p {
+        font-size: 22px;
+        font-weight: 400;
+        margin: 10px 0;
       }
     </style>
   </head>
   <body>
-    <h2>Smart Garden Dashboard</h2>
-    <p>Temperature: <span id="temp"> </span> °C</p>
-    <p>Humidity: <span id="hum"> </span> %</p>
-    <p>Soil: <span id="soil"> </span></p>
-    <p>Light: <span id="light"> </span> lx</p>
+    <!-- Intro section -->
+    <section class="welcome">
+      <h2>Welcome to</h2>
+      <h1>Im-Plant</h1>
+    </section>
+
+    <!-- Dashboard section -->
+    <section class="dashboard">
+      <h1>Smart Garden Dashboard</h1>
+      <p>Temperature: <span id="temp"></span> °C</p>
+      <p>Humidity: <span id="hum"></span> %</p>
+      <p>Soil: <span id="soil"></span></p>
+      <p>Light: <span id="light"></span> lx</p>
+    </section>
 
     <script>
       const firebaseConfig = {
