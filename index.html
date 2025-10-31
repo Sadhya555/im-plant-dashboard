@@ -1,38 +1,40 @@
 <html>
   <head>
     <meta charset="UTF-8" />
-    <title>Smart Gardening System</title>
+    <title>Im-Plant | Smart Gardening System</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
     <style>
+      * { box-sizing: border-box; }
       body {
-        font-family: 'Roboto', sans-serif;
         margin: 0;
-        background-color: #f5f5f5;
+        font-family: 'Roboto', sans-serif;
+        background: #f5f5f5;
         color: #222;
+        overflow: hidden; /* locked initially */
         text-align: center;
       }
 
       section {
-        display: none;
         min-height: 100vh;
+        display: none;
+        flex-direction: column;
         justify-content: center;
         align-items: center;
-        flex-direction: column;
+        opacity: 0;
+        transition: opacity 1s ease;
         padding: 40px;
       }
 
       section.active {
         display: flex;
-      }
-
-      h1, h2 {
-        margin-bottom: 20px;
+        opacity: 1;
       }
 
       button {
-        margin: 10px;
+        margin: 8px;
         padding: 12px 24px;
         font-size: 18px;
         border: none;
@@ -41,7 +43,6 @@
         color: white;
         cursor: pointer;
       }
-
       button:disabled {
         background-color: #aaa;
         cursor: not-allowed;
@@ -52,17 +53,38 @@
         font-size: 16px;
         margin: 8px;
       }
+
+      hr { width: 60%; margin: 40px 0; }
+
+      /* welcome section */
+      #welcome h2 {
+        font-weight: 400;
+        font-size: 28px;
+        margin: 0;
+      }
+      #welcome h1 {
+        font-weight: 700;
+        font-size: 96px;
+        margin: 10px 0 0 0;
+      }
     </style>
   </head>
 
   <body>
+    <!-- 0. WELCOME -->
+    <section id="welcome">
+      <h2>Welcome to</h2>
+      <h1>Im-Plant</h1>
+    </section>
+
     <!-- 1. HOME -->
-    <section id="home" class="active">
+    <section id="home">
       <h1>Smart Gardening System</h1>
       <div>
         <button id="goToSetup">Go to Plant Setup</button>
         <button id="goToHealth" disabled>Check Plant Health</button>
       </div>
+      <button id="clearData" style="margin-top:20px; background-color:#f44336;">Clear Plant Data</button>
     </section>
 
     <!-- 2. PLANT SETUP -->
@@ -78,7 +100,7 @@
         <p id="suggestResult"></p>
         <button id="confirmSuggested" disabled>Confirm Plant</button>
       </div>
-      <hr style="width:60%; margin:40px 0;">
+      <hr>
       <div id="selectSection">
         <h2>I Already Planted One</h2>
         <select id="plantList">
@@ -92,6 +114,7 @@
         <br>
         <button id="confirmSelected">Confirm Plant</button>
       </div>
+      <button id="backHome" style="margin-top:30px;">⬅ Back</button>
     </section>
 
     <!-- 3. PLANT HEALTH -->
@@ -107,10 +130,11 @@
         <button id="waterBtn">Water Now 💦</button>
         <button id="autoMode">Auto Mode: OFF</button>
       </div>
+      <button id="backSetup" style="margin-top:30px;">⬅ Back</button>
     </section>
 
     <script>
-      // Firebase setup
+      // Firebase init
       const firebaseConfig = {
         apiKey: "AIzaSyA2lx9dz9n_U3yjGzedewfYx_zHRp-qKRY",
         databaseURL: "https://im-plant-bracu-default-rtdb.asia-southeast1.firebasedatabase.app/"
@@ -118,76 +142,90 @@
       const app = firebase.initializeApp(firebaseConfig);
       const db = firebase.database();
 
-      // DOM references
+      // Section refs
       const sections = {
+        welcome: document.getElementById("welcome"),
         home: document.getElementById("home"),
         setup: document.getElementById("setup"),
         health: document.getElementById("health")
       };
-      const goToSetup = document.getElementById("goToSetup");
-      const goToHealth = document.getElementById("goToHealth");
-      const suggestBtn = document.getElementById("suggestBtn");
-      const confirmSuggested = document.getElementById("confirmSuggested");
-      const confirmSelected = document.getElementById("confirmSelected");
-      const suggestResult = document.getElementById("suggestResult");
-      const plantName = document.getElementById("plantName");
-      const healthMsg = document.getElementById("healthMsg");
-      const autoMode = document.getElementById("autoMode");
-      const waterBtn = document.getElementById("waterBtn");
 
-      let selectedPlant = localStorage.getItem("plant") || null;
-      let auto = false;
-
-      if (selectedPlant) goToHealth.disabled = false;
-
-      // Navigation control
-      function show(section) {
-        Object.values(sections).forEach(s => s.classList.remove("active"));
-        sections[section].classList.add("active");
+      function show(id) {
+        for (const s of Object.values(sections)) s.classList.remove("active");
+        sections[id].classList.add("active");
       }
 
-      goToSetup.onclick = () => show("setup");
-      goToHealth.onclick = () => show("health");
+      // Welcome logic
+      window.onload = () => {
+        show("welcome");
+        document.body.style.overflow = "hidden";
+        setTimeout(() => sections.welcome.classList.add("active"), 100);
 
-      // Read live data
+        // Wait for user input to continue
+        const proceed = () => {
+          sections.welcome.classList.remove("active");
+          setTimeout(() => {
+            show("home");
+            document.body.style.overflow = "auto"; // enable scroll later
+          }, 1000);
+          ["wheel","click","keydown","touchstart"].forEach(e => window.removeEventListener(e, proceed));
+        };
+        ["wheel","click","keydown","touchstart"].forEach(e =>
+          window.addEventListener(e, proceed, { once:true })
+        );
+      };
+
+      // State
+      let selectedPlant = localStorage.getItem("plant") || null;
+      let auto = false;
+      if (selectedPlant) document.getElementById("goToHealth").disabled = false;
+
+      // Navigation
+      document.getElementById("goToSetup").onclick = () => show("setup");
+      document.getElementById("goToHealth").onclick = () => show("health");
+      document.getElementById("backHome").onclick = () => show("home");
+      document.getElementById("backSetup").onclick = () => show("setup");
+
+      document.getElementById("clearData").onclick = () => {
+        localStorage.removeItem("plant");
+        selectedPlant = null;
+        document.getElementById("goToHealth").disabled = true;
+        alert("Plant data cleared.");
+      };
+
+      // Firebase live read
       let sensorData = {};
       db.ref("/garden").on("value", snap => {
         sensorData = snap.val() || {};
-        document.getElementById("temp").textContent = sensorData.temperature;
-        document.getElementById("hum").textContent = sensorData.humidity;
-        document.getElementById("light").textContent = sensorData.light;
-        document.getElementById("soil").textContent = sensorData.soil;
-
-        // Also update health view if visible
-        document.getElementById("hTemp").textContent = sensorData.temperature;
-        document.getElementById("hHum").textContent = sensorData.humidity;
-        document.getElementById("hLight").textContent = sensorData.light;
-        document.getElementById("hSoil").textContent = sensorData.soil;
-
+        ["temp","hum","light","soil"].forEach(k => {
+          document.getElementById(k).textContent = sensorData[k === "temp" ? "temperature" : k] || "-";
+          document.getElementById("h" + k.charAt(0).toUpperCase() + k.slice(1)).textContent = sensorData[k === "temp" ? "temperature" : k] || "-";
+        });
         updateHealthMessage();
       });
 
-      // Suggest plant
-      suggestBtn.onclick = () => {
+      // Suggestion logic
+      document.getElementById("suggestBtn").onclick = () => {
         const { temperature, humidity, light, soil } = sensorData;
-        let plant = "Tomato"; // placeholder logic
+        let plant = "Tomato";
         if (temperature < 20) plant = "Mint";
         else if (light < 200) plant = "Fern";
         else if (soil < 40) plant = "Cactus";
 
-        suggestResult.textContent = `Best plant for your pot: ${plant}`;
-        confirmSuggested.disabled = false;
-        confirmSuggested.dataset.plant = plant;
+        document.getElementById("suggestResult").textContent = "Best plant for your pot: " + plant;
+        const btn = document.getElementById("confirmSuggested");
+        btn.disabled = false;
+        btn.dataset.plant = plant;
       };
 
-      confirmSuggested.onclick = () => {
-        selectedPlant = confirmSuggested.dataset.plant;
+      document.getElementById("confirmSuggested").onclick = e => {
+        selectedPlant = e.target.dataset.plant;
         savePlant();
       };
 
-      confirmSelected.onclick = () => {
+      document.getElementById("confirmSelected").onclick = () => {
         const listVal = document.getElementById("plantList").value;
-        const customVal = document.getElementById("customPlant").value;
+        const customVal = document.getElementById("customPlant").value.trim();
         selectedPlant = customVal || listVal;
         if (!selectedPlant) return alert("Select or enter a plant first.");
         savePlant();
@@ -195,24 +233,24 @@
 
       function savePlant() {
         localStorage.setItem("plant", selectedPlant);
-        goToHealth.disabled = false;
+        document.getElementById("goToHealth").disabled = false;
+        document.getElementById("plantName").textContent = "Monitoring: " + selectedPlant;
         show("health");
-        plantName.textContent = `Monitoring: ${selectedPlant}`;
       }
 
-      // Health messages
+      // Health logic
       function updateHealthMessage() {
-        if (!sensorData.soil) return;
-        if (sensorData.soil < 30) healthMsg.textContent = "Soil is dry — water the plant.";
-        else if (sensorData.light < 200) healthMsg.textContent = "Low light detected — move plant to sunlight.";
-        else healthMsg.textContent = "Ideal conditions — keep it up!";
+        const msg = document.getElementById("healthMsg");
+        if (!sensorData.soil) return (msg.textContent = "");
+        if (sensorData.soil < 30) msg.textContent = "Soil is dry — water the plant.";
+        else if (sensorData.light < 200) msg.textContent = "Low light detected — move plant to sunlight.";
+        else msg.textContent = "Ideal conditions — keep it up!";
       }
 
-      // Manual control simulation
-      waterBtn.onclick = () => alert("Pump activated manually.");
-      autoMode.onclick = () => {
+      document.getElementById("waterBtn").onclick = () => alert("Pump activated manually.");
+      document.getElementById("autoMode").onclick = e => {
         auto = !auto;
-        autoMode.textContent = `Auto Mode: ${auto ? "ON" : "OFF"}`;
+        e.target.textContent = "Auto Mode: " + (auto ? "ON" : "OFF");
       };
     </script>
   </body>
