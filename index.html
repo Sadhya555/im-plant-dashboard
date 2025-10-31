@@ -1,93 +1,112 @@
 <html>
   <head>
+    <meta charset="UTF-8" />
+    <title>Smart Gardening System</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
       body {
-        margin: 0;
         font-family: 'Roboto', sans-serif;
-        overflow: hidden; /* prevent scroll */
+        margin: 0;
         background-color: #f5f5f5;
         color: #222;
+        text-align: center;
       }
 
       section {
-        height: 100vh;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        text-align: center;
-        opacity: 0;
-        transition: opacity 1s ease;
-      }
-
-      .fade-in {
-        opacity: 1;
-      }
-
-      .fade-out {
-        opacity: 0;
-        pointer-events: none;
-      }
-
-      .welcome h2 {
-        font-weight: 400;
-        font-size: 28px;
-        margin: 0;
-      }
-
-      .welcome h1 {
-        font-weight: 700;
-        font-size: 96px;
-        margin: 10px 0 0 0;
-      }
-
-      .dashboard {
         display: none;
-        flex-direction: column;
+        min-height: 100vh;
         justify-content: center;
         align-items: center;
+        flex-direction: column;
+        padding: 40px;
       }
 
-      .dashboard.show {
+      section.active {
         display: flex;
-        animation: fadeIn 1s ease forwards;
       }
 
-      @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
+      h1, h2 {
+        margin-bottom: 20px;
       }
 
-      .dashboard h1 {
-        font-size: 60px;
-        font-weight: 700;
-        margin-bottom: 30px;
+      button {
+        margin: 10px;
+        padding: 12px 24px;
+        font-size: 18px;
+        border: none;
+        border-radius: 6px;
+        background-color: #4CAF50;
+        color: white;
+        cursor: pointer;
       }
 
-      .dashboard p {
-        font-size: 22px;
-        font-weight: 400;
-        margin: 10px 0;
+      button:disabled {
+        background-color: #aaa;
+        cursor: not-allowed;
+      }
+
+      select, input {
+        padding: 10px;
+        font-size: 16px;
+        margin: 8px;
       }
     </style>
   </head>
+
   <body>
-    <!-- Intro -->
-    <section class="welcome" id="welcome">
-      <h2>Welcome to</h2>
-      <h1>Im-Plant</h1>
+    <!-- 1. HOME -->
+    <section id="home" class="active">
+      <h1>Smart Gardening System</h1>
+      <div>
+        <button id="goToSetup">Go to Plant Setup</button>
+        <button id="goToHealth" disabled>Check Plant Health</button>
+      </div>
     </section>
 
-    <!-- Dashboard -->
-    <section class="dashboard" id="dashboard">
-      <h1>Smart Garden Dashboard</h1>
-      <p>Temperature: <span id="temp"></span> °C</p>
-      <p>Humidity: <span id="hum"></span> %</p>
-      <p>Soil: <span id="soil"></span></p>
-      <p>Light: <span id="light"></span> lx</p>
+    <!-- 2. PLANT SETUP -->
+    <section id="setup">
+      <h1>Plant Selection or Suggestion</h1>
+      <div id="suggestSection">
+        <h2>Suggest a Plant</h2>
+        <p>Temperature: <span id="temp"></span> °C</p>
+        <p>Humidity: <span id="hum"></span> %</p>
+        <p>Light: <span id="light"></span> lx</p>
+        <p>Moisture: <span id="soil"></span></p>
+        <button id="suggestBtn">Suggest</button>
+        <p id="suggestResult"></p>
+        <button id="confirmSuggested" disabled>Confirm Plant</button>
+      </div>
+      <hr style="width:60%; margin:40px 0;">
+      <div id="selectSection">
+        <h2>I Already Planted One</h2>
+        <select id="plantList">
+          <option value="">Select Plant</option>
+          <option>Tomato</option>
+          <option>Rose</option>
+          <option>Mint</option>
+          <option>Chili</option>
+        </select><br>
+        <input type="text" id="customPlant" placeholder="Custom Plant Name (optional)">
+        <br>
+        <button id="confirmSelected">Confirm Plant</button>
+      </div>
+    </section>
+
+    <!-- 3. PLANT HEALTH -->
+    <section id="health">
+      <h1>Monitor and Maintain Plant Health</h1>
+      <h2 id="plantName">Monitoring:</h2>
+      <p>Temperature 🌡️: <span id="hTemp"></span> °C</p>
+      <p>Humidity 💧: <span id="hHum"></span> %</p>
+      <p>Light ☀️: <span id="hLight"></span> lx</p>
+      <p>Soil 🌱: <span id="hSoil"></span></p>
+      <h3 id="healthMsg"></h3>
+      <div>
+        <button id="waterBtn">Water Now 💦</button>
+        <button id="autoMode">Auto Mode: OFF</button>
+      </div>
     </section>
 
     <script>
@@ -99,38 +118,102 @@
       const app = firebase.initializeApp(firebaseConfig);
       const db = firebase.database();
 
-      db.ref("/garden").on("value", snapshot => {
-        const data = snapshot.val();
-        document.getElementById("temp").textContent = data.temperature;
-        document.getElementById("hum").textContent = data.humidity;
-        document.getElementById("soil").textContent = data.soil;
-        document.getElementById("light").textContent = data.light;
-      });
+      // DOM references
+      const sections = {
+        home: document.getElementById("home"),
+        setup: document.getElementById("setup"),
+        health: document.getElementById("health")
+      };
+      const goToSetup = document.getElementById("goToSetup");
+      const goToHealth = document.getElementById("goToHealth");
+      const suggestBtn = document.getElementById("suggestBtn");
+      const confirmSuggested = document.getElementById("confirmSuggested");
+      const confirmSelected = document.getElementById("confirmSelected");
+      const suggestResult = document.getElementById("suggestResult");
+      const plantName = document.getElementById("plantName");
+      const healthMsg = document.getElementById("healthMsg");
+      const autoMode = document.getElementById("autoMode");
+      const waterBtn = document.getElementById("waterBtn");
 
-      // Elements
-      const welcome = document.getElementById("welcome");
-      const dashboard = document.getElementById("dashboard");
+      let selectedPlant = localStorage.getItem("plant") || null;
+      let auto = false;
 
-      // Fade in on load
-      window.addEventListener("load", () => {
-        setTimeout(() => welcome.classList.add("fade-in"), 100);
-      });
+      if (selectedPlant) goToHealth.disabled = false;
 
-      // Trigger fade out on any user input
-      function transitionToDashboard() {
-        if (!welcome.classList.contains("fade-out")) {
-          welcome.classList.add("fade-out");
-          setTimeout(() => {
-            welcome.style.display = "none";
-            dashboard.classList.add("show");
-          }, 1500);
-        }
+      // Navigation control
+      function show(section) {
+        Object.values(sections).forEach(s => s.classList.remove("active"));
+        sections[section].classList.add("active");
       }
 
-      // Listen for user actions
-      ["wheel", "touchstart", "keydown", "click"].forEach(evt =>
-        window.addEventListener(evt, transitionToDashboard, { once: true })
-      );
+      goToSetup.onclick = () => show("setup");
+      goToHealth.onclick = () => show("health");
+
+      // Read live data
+      let sensorData = {};
+      db.ref("/garden").on("value", snap => {
+        sensorData = snap.val() || {};
+        document.getElementById("temp").textContent = sensorData.temperature;
+        document.getElementById("hum").textContent = sensorData.humidity;
+        document.getElementById("light").textContent = sensorData.light;
+        document.getElementById("soil").textContent = sensorData.soil;
+
+        // Also update health view if visible
+        document.getElementById("hTemp").textContent = sensorData.temperature;
+        document.getElementById("hHum").textContent = sensorData.humidity;
+        document.getElementById("hLight").textContent = sensorData.light;
+        document.getElementById("hSoil").textContent = sensorData.soil;
+
+        updateHealthMessage();
+      });
+
+      // Suggest plant
+      suggestBtn.onclick = () => {
+        const { temperature, humidity, light, soil } = sensorData;
+        let plant = "Tomato"; // placeholder logic
+        if (temperature < 20) plant = "Mint";
+        else if (light < 200) plant = "Fern";
+        else if (soil < 40) plant = "Cactus";
+
+        suggestResult.textContent = `Best plant for your pot: ${plant}`;
+        confirmSuggested.disabled = false;
+        confirmSuggested.dataset.plant = plant;
+      };
+
+      confirmSuggested.onclick = () => {
+        selectedPlant = confirmSuggested.dataset.plant;
+        savePlant();
+      };
+
+      confirmSelected.onclick = () => {
+        const listVal = document.getElementById("plantList").value;
+        const customVal = document.getElementById("customPlant").value;
+        selectedPlant = customVal || listVal;
+        if (!selectedPlant) return alert("Select or enter a plant first.");
+        savePlant();
+      };
+
+      function savePlant() {
+        localStorage.setItem("plant", selectedPlant);
+        goToHealth.disabled = false;
+        show("health");
+        plantName.textContent = `Monitoring: ${selectedPlant}`;
+      }
+
+      // Health messages
+      function updateHealthMessage() {
+        if (!sensorData.soil) return;
+        if (sensorData.soil < 30) healthMsg.textContent = "Soil is dry — water the plant.";
+        else if (sensorData.light < 200) healthMsg.textContent = "Low light detected — move plant to sunlight.";
+        else healthMsg.textContent = "Ideal conditions — keep it up!";
+      }
+
+      // Manual control simulation
+      waterBtn.onclick = () => alert("Pump activated manually.");
+      autoMode.onclick = () => {
+        auto = !auto;
+        autoMode.textContent = `Auto Mode: ${auto ? "ON" : "OFF"}`;
+      };
     </script>
   </body>
 </html>
