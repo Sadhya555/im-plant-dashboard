@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=yes">
 <title>Im-Plant | Smart Gardening System</title>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 <style>
@@ -47,50 +47,53 @@ button{padding:10px 16px;border-radius:8px;border:0;cursor:pointer;font-size:16p
 .monitor{max-width:720px;margin:0 auto}
 .monitor p{margin:8px 0}
 .lock-scroll{overflow:hidden}
-@media (max-width:760px){
-  #welcome h1{font-size:48px}
-  .container{margin-top:80px;padding:12px}
-  .sensors,.controls{width:100%}
-}
-  /* Mobile accessibility without altering desktop appearance */
-@media (max-width: 600px) {
+/* Responsive layout: safe for desktop, improved mobile accessibility */
+@media (max-width: 760px) {
   body {
     padding: 0 10px;
-    font-size: 1.1em;
+    font-size: 1.05em;
   }
 
-  h1 {
-    font-size: 2.2em;
+  #welcome h1 {
+    font-size: 48px;
   }
 
-  h2, h3 {
-    font-size: 1.6em;
+  h2.title, h3.title {
+    font-size: 1.5em;
+  }
+
+  .container {
+    margin-top: 80px;
+    padding: 12px;
+  }
+
+  .sensors, .controls {
+    width: 100%;
   }
 
   button {
-    width: 90%;
-    font-size: 1.1em;
-    padding: 16px;
-    margin: 12px auto;
+    width: 100%;
+    font-size: 1.05em;
+    padding: 14px;
+    margin-top: 8px;
   }
 
   input[type="text"] {
-    width: 90%;
-    font-size: 1.1em;
-    padding: 14px;
+    width: 100%;
+    font-size: 1.05em;
+    padding: 12px;
   }
 
-  #plantList, #suggestList {
-    width: 90%;
+  #plantList, #suggestList, #searchResults {
+    width: 100%;
     font-size: 1.05em;
     max-height: 300px;
   }
 
-  .plant-item {
-    padding: 14px;
+  .list-item, .suggestion-entry {
+    padding: 12px;
   }
 }
-
 </style>
 </head>
 <body>
