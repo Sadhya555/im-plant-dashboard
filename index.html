@@ -18,10 +18,15 @@
 body{margin:0;font-family:Roboto,system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:#111}
 #app{max-width:1000px;margin:40px auto;padding:16px}
 #welcome{
-  position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
-  flex-direction:column; gap:8px; background:var(--green); color:white;
-  z-index:9999; opacity:0; transition:opacity 1s;
+  position:fixed; inset:0;
+  display:none; /* start hidden */
+  align-items:center; justify-content:center;
+  flex-direction:column; gap:8px;
+  background:var(--green); color:white;
+  z-index:9999;
+  opacity:0; transition:opacity 1s;
 }
+
 #welcome h1{font-size:96px; margin:0; font-weight:700; text-align:center}
 #welcome h2{font-size:20px;margin:0;font-weight:400}
 .container{max-width:980px;margin:120px auto 40px;padding:0 16px}
@@ -263,6 +268,7 @@ let autoModeOn = false;
 
 /* ---------- Welcome behavior ---------- */
 function showWelcome(){
+  dom.welcome.style.display = 'flex';
   dom.welcome.style.opacity = '1';
   dom.app.style.display = 'none';
   const proceed = ()=> {
