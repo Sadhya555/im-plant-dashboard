@@ -32,21 +32,10 @@ button{padding:10px 16px;border-radius:8px;border:0;cursor:pointer;font-size:16p
 .btn-back{background:#666;color:#fff}
 .btn-danger{background:var(--danger); color:#fff}
 .card{background:var(--card); padding:16px; border-radius:10px; box-shadow:0 6px 18px rgba(0,0,0,0.06); text-align:left}
-.health-grid{display:flex; gap:20px; align-items:flex-start; justify-content:center; flex-wrap:wrap}
 .sensors{min-width:320px; max-width:420px}
 .controls{min-width:320px; max-width:420px}
 .sensors p, .monitor p{margin:8px 0; font-size:16px}
 .muted{color:var(--muted); font-size:14px}
-.list-box{border:1px solid #ddd; border-radius:8px; max-height:220px; overflow:auto; padding:6px; background:#fff}
-.list-item{padding:10px; border-radius:6px; margin:6px 0; cursor:pointer; border:1px solid transparent}
-.list-item:hover{background:#f1f8f1; border-color:var(--accent)}
-.list-item.selected{background:#e8f5e9; border-color:var(--accent)}
-.suggestion-box{border:1px solid #ddd; border-radius:8px; max-height:200px; overflow:auto; background:#fff; margin-top:6px}
-.suggestion-entry{padding:8px; cursor:pointer}
-.suggestion-entry:hover{background:#f3f3f3}
-.monitor{max-width:720px;margin:0 auto}
-.monitor p{margin:8px 0}
-.lock-scroll{overflow:hidden}
 @media (max-width:760px){
   #welcome h1{font-size:48px}
   .container{margin-top:80px;padding:12px}
@@ -63,19 +52,17 @@ button{padding:10px 16px;border-radius:8px;border:0;cursor:pointer;font-size:16p
 </div>
 
 <div id="app" class="container" style="display:none">
-  <!-- Main -->
   <section id="mainPage">
     <h2 class="title">Smart Gardening System</h2>
     <div class="center-row">
       <button id="gotoSetup" class="btn-primary">Plant Setup</button>
-      <button id="gotoHealth" id="plantHealthBtn" class="btn-back" disabled>Plant Health</button>
+      <button id="gotoHealth" class="btn-back" disabled>Plant Health</button>
     </div>
     <div class="center-row" style="margin-top:12px">
       <button id="clearAll" class="btn-danger">Clear Data</button>
     </div>
   </section>
 
-  <!-- Plant Setup (contains Plant Health info too) -->
   <section id="setupPage" style="display:none; margin-top:20px">
     <h3 class="title">Plant Setup</h3>
     <div class="card">
@@ -86,42 +73,15 @@ button{padding:10px 16px;border-radius:8px;border:0;cursor:pointer;font-size:16p
           <p>💧 Humidity: <strong id="s_hum">--</strong> %</p>
           <p>☀️ Light: <strong id="s_light">--</strong> lx</p>
           <p>🌱 Soil Moisture: <strong id="s_soil">--</strong> %</p>
-          <p class="muted">Sensor values update every 2s (simulated).</p>
+          <p class="muted">Sensor values update via Firebase live data.</p>
         </div>
-
         <div class="controls">
-          <h4 style="margin-top:0">Actions</h4>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button id="btnSuggest" class="btn-primary">Suggest a Plant</button>
-            <button id="btnAlready" class="btn-primary">I Already Planted One</button>
-            <button id="btnSetupBack" class="btn-back">Back</button>
-          </div>
-
-          <div id="suggestArea" style="margin-top:14px; display:none">
-            <p class="muted">Suitable plants (based on temp & humidity at click). Select one and Confirm.</p>
-            <div id="suitableList" class="list-box" tabindex="0" aria-label="suitable plants list" style="margin-top:8px"></div>
-            <div style="display:flex;gap:8px;margin-top:12px">
-              <button id="confirmSuggest" class="btn-primary" disabled>Confirm</button>
-              <button id="backSuggest" class="btn-back">Back</button>
-            </div>
-          </div>
-
-          <div id="alreadyArea" style="margin-top:14px; display:none">
-            <p class="muted">Type to search; results appear below (alphabetical).</p>
-            <input id="searchInput" placeholder="Type plant name..." style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd" autocomplete="off" />
-            <div id="searchResults" class="suggestion-box" style="margin-top:8px"></div>
-            <div style="display:flex;gap:8px;margin-top:12px">
-              <button id="selectExisting" class="btn-primary" disabled>Select</button>
-              <button id="backExisting" class="btn-back">Back</button>
-            </div>
-          </div>
-
+          <!-- Add plant suggestion/selection buttons here -->
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Monitoring -->
   <section id="monitorPage" style="display:none; margin-top:20px">
     <h3 class="title">Plant Monitoring</h3>
     <div class="monitor card">
@@ -131,410 +91,110 @@ button{padding:10px 16px;border-radius:8px;border:0;cursor:pointer;font-size:16p
       <p>☀️ Light: <strong id="m_light">--</strong> lx</p>
       <p>🌱 Soil Moisture: <strong id="m_soil">--</strong> %</p>
       <p id="monitorComments" class="muted" style="margin-top:10px">Comments will appear here based on sensor data.</p>
-
-      <div style="display:flex; gap:10px; margin-top:12px">
-        <button id="waterBtn" class="btn-primary">Water Now 💦</button>
-        <button id="autoBtn" class="btn-primary">Auto Mode: OFF</button>
-        <button id="monitorBackBtn" class="btn-back">Back</button>
-      </div>
     </div>
   </section>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 <script>
-/* ---------- Data & state ---------- */
-const PLANTS = [
-  {name:'Basil', tempMin:22,tempMax:32, humMin:40, humMax:60},
-  {name:'Bitter Gourd (Korola)', tempMin:20,tempMax:30, humMin:60, humMax:80},
-  {name:'Bottle Gourd (Lau)', tempMin:22,tempMax:35, humMin:60, humMax:80},
-  {name:'Chili Pepper', tempMin:22,tempMax:32, humMin:50, humMax:70},
-  {name:'Chrysanthemum', tempMin:15,tempMax:25, humMin:60, humMax:70},
-  {name:'Coriander', tempMin:18,tempMax:27, humMin:50, humMax:70},
-  {name:'Garlic', tempMin:10,tempMax:25, humMin:40, humMax:60},
-  {name:'Hibiscus', tempMin:22,tempMax:32, humMin:60, humMax:80},
-  {name:'Jasmine', tempMin:20,tempMax:30, humMin:60, humMax:70},
-  {name:'Lemon', tempMin:20,tempMax:32, humMin:50, humMax:70},
-  {name:'Lemongrass', tempMin:22,tempMax:32, humMin:60, humMax:80},
-  {name:'Lettuce', tempMin:15,tempMax:25, humMin:60, humMax:80},
-  {name:'Marigold', tempMin:18,tempMax:30, humMin:50, humMax:70},
-  {name:'Mint', tempMin:18,tempMax:25, humMin:60, humMax:80},
-  {name:'Neem Tree', tempMin:25,tempMax:40, humMin:30, humMax:50},
-  {name:'Onion', tempMin:18,tempMax:30, humMin:50, humMax:70},
-  {name:'Oregano', tempMin:20,tempMax:30, humMin:40, humMax:60},
-  {name:'Papaya', tempMin:22,tempMax:35, humMin:50, humMax:70},
-  {name:'Parsley', tempMin:15,tempMax:25, humMin:60, humMax:70},
-  {name:'Petunia', tempMin:15,tempMax:25, humMin:50, humMax:70},
-  {name:'Potato', tempMin:15,tempMax:25, humMin:60, humMax:70},
-  {name:'Pumpkin', tempMin:20,tempMax:30, humMin:60, humMax:70},
-  {name:'Sunflower', tempMin:20,tempMax:32, humMin:50, humMax:60},
-  {name:'Thyme', tempMin:18,tempMax:30, humMin:40, humMax:60},
-  {name:'Tomato', tempMin:20,tempMax:30, humMin:50, humMax:70}
-];
-
-const dom = {
-  welcome: document.getElementById('welcome'),
-  app: document.getElementById('app'),
-  mainPage: document.getElementById('mainPage'),
-  setupPage: document.getElementById('setupPage'),
-  healthPage: document.getElementById('setupPage'), // plant setup contains health info as requested
-  monitorPage: document.getElementById('monitorPage'),
-  gotoSetup: document.getElementById('gotoSetup'),
-  gotoHealth: document.getElementById('gotoHealth'),
-  clearAll: document.getElementById('clearAll'),
-  // sensors
-  s_temp: document.getElementById('s_temp'),
-  s_hum: document.getElementById('s_hum'),
-  s_light: document.getElementById('s_light'),
-  s_soil: document.getElementById('s_soil'),
-  // actions
-  btnSuggest: document.getElementById('btnSuggest'),
-  btnAlready: document.getElementById('btnAlready'),
-  btnSetupBack: document.getElementById('btnSetupBack'),
-  // suggest area
-  suggestArea: document.getElementById('suggestArea'),
-  suitableList: document.getElementById('suitableList'),
-  confirmSuggest: document.getElementById('confirmSuggest'),
-  backSuggest: document.getElementById('backSuggest'),
-  // already area
-  alreadyArea: document.getElementById('alreadyArea'),
-  searchInput: document.getElementById('searchInput'),
-  searchResults: document.getElementById('searchResults'),
-  selectExisting: document.getElementById('selectExisting'),
-  backExisting: document.getElementById('backExisting'),
-  // monitor
-  monPlant: document.getElementById('monPlant'),
-  m_temp: document.getElementById('m_temp'),
-  m_hum: document.getElementById('m_hum'),
-  m_light: document.getElementById('m_light'),
-  m_soil: document.getElementById('m_soil'),
-  monitorComments: document.getElementById('monitorComments'),
-  waterBtn: document.getElementById('waterBtn'),
-  autoBtn: document.getElementById('autoBtn'),
-  monitorBackBtn: document.getElementById('monitorBackBtn')
-};
-
-let sensorSnapshot = { temperature: null, humidity: null, light: null, soil: null };
-let confirmedPlant = localStorage.getItem('confirmedPlant') ? JSON.parse(localStorage.getItem('confirmedPlant')) : null;
-let selectedFromSuggest = null;
-let selectedExisting = null;
-let autoModeOn = false;
-
-/* ---------- Welcome behavior ---------- */
-function showWelcome(){
-  dom.welcome.style.opacity = '1';
-  dom.app.style.display = 'none';
-  const proceed = ()=> {
-    dom.welcome.style.opacity = '0';
-    setTimeout(()=> {
-      dom.welcome.style.display = 'none';
-      dom.app.style.display = 'block';
-      showMain();
-      applyHealthButtonState();
-    }, 900);
-    ['click','wheel','keydown','touchstart'].forEach(e=> window.removeEventListener(e, proceed));
+  // ----------------- Firebase Setup -----------------
+  const firebaseConfig = {
+    apiKey: "AIzaSyA2lx9dz9n_U3yjGzedewfYx_zHRp-qKRY",
+    authDomain: "im-plant-bracu.firebaseapp.com",
+    databaseURL: "https://im-plant-bracu-default-rtdb.asia-southeast1.firebasedatabase.app",
   };
-  ['click','wheel','keydown','touchstart'].forEach(e=> window.addEventListener(e, proceed, { once:true }));
-}
-showWelcome();
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
 
-/* ---------- Navigation helpers ---------- */
-function hideAll(){ dom.mainPage.style.display='none'; dom.setupPage.style.display='none'; dom.monitorPage.style.display='none'; }
-function showMain(){ hideAll(); dom.mainPage.style.display='block'; }
-function showSetup(){ hideAll(); dom.setupPage.style.display='block'; }
-function showMonitor(){ hideAll(); dom.monitorPage.style.display='block'; }
-
-/* ---------- Health button state ---------- */
-function applyHealthButtonState(){
-  const healthBtn = document.getElementById('gotoHealth');
-  if(confirmedPlant){
-    healthBtn.className = 'btn-primary'; // green
-    healthBtn.disabled = false;
-  } else {
-    healthBtn.className = 'btn-back'; // grey
-    healthBtn.disabled = true;
-  }
-}
-
-/* ---------- Main controls ---------- */
-dom.gotoSetup.addEventListener('click', ()=> showSetup());
-dom.gotoHealth.addEventListener('click', ()=> { if(confirmedPlant) { showMonitor(); updateMonitorComments(); }});
-dom.clearAll.addEventListener('click', ()=>{
-  confirmedPlant = null;
-  localStorage.removeItem('confirmedPlant');
-  applyHealthButtonState();
-  dom.monPlant.textContent = '—';
-  alert('Cleared confirmed plant.');
-});
-
-/* ---------- Sensor simulation ---------- */
-function updateSensorsRandom(){
-  const t = (15 + Math.random()*20);
-  const h = (30 + Math.random()*55);
-  const l = Math.round(100 + Math.random()*2000);
-  const soil = Math.round(20 + Math.random()*70<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Im-Plant | Smart Gardening System</title>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-  <style>
-    body {
-      margin: 0;
-      font-family: 'Roboto', sans-serif;
-      background-color: #f5f5f5;
-      color: #222;
-    }
-
-    .welcome {
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      text-align: center;
-    }
-
-    .welcome h2 {
-      font-weight: 400;
-      font-size: 28px;
-      margin: 0;
-    }
-
-    .welcome h1 {
-      font-weight: 700;
-      font-size: 96px;
-      margin: 10px 0 0 0;
-    }
-
-    .dashboard {
-      min-height: 100vh;
-      text-align: center;
-      padding-top: 80px;
-    }
-
-    .dashboard h1 {
-      font-size: 60px;
-      font-weight: 700;
-      margin-bottom: 30px;
-    }
-
-    .dashboard p {
-      font-size: 22px;
-      font-weight: 400;
-      margin: 10px 0;
-    }
-  </style>
-</head>
-<body>
-  <!-- Intro section -->
-  <section class="welcome">
-    <h2>Welcome to</h2>
-    <h1>Im-Plant</h1>
-  </section>
-
-  <!-- Dashboard section -->
-  <section class="dashboard">
-    <h1>Smart Garden Dashboard</h1>
-    <p>Temperature: <span id="temp">--</span> °C</p>
-    <p>Humidity: <span id="hum">--</span> %</p>
-    <p>Soil Moisture: <span id="soil">--</span> %</p>
-    <p>Light Intensity: <span id="light">--</span> lx</p>
-  </section>
-
-  <script>
-    // ---------- Firebase Configuration ----------
-    const firebaseConfig = {
-      apiKey: "AIzaSyA2lx9dz9n_U3yjGzedewfYx_zHRp-qKRY",
-      databaseURL: "https://im-plant-bracu-default-rtdb.asia-southeast1.firebasedatabase.app/"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-
-    // ---------- Realtime Updates from ESP32 ----------
-    const dbRef = db.ref("/garden");
-
-    dbRef.on("value", snapshot => {
-      const data = snapshot.val();
-      if (!data) return;
-
-      document.getElementById("temp").textContent = data.temperature?.toFixed?.(1) ?? data.temperature ?? "--";
-      document.getElementById("hum").textContent = data.humidity?.toFixed?.(0) ?? data.humidity ?? "--";
-      document.getElementById("soil").textContent = data.soil?.toFixed?.(0) ?? data.soil ?? "--";
-      document.getElementById("light").textContent = data.light?.toFixed?.(0) ?? data.light ?? "--";
-    });
-  </script>
-</body>
-</html>
-);
-
-  dom.s_temp.textContent = t.toFixed(1);
-  dom.s_hum.textContent = h.toFixed(0);
-  dom.s_light.textContent = l;
-  dom.s_soil.textContent = soil;
-
-  dom.m_temp.textContent = t.toFixed(1);
-  dom.m_hum.textContent = h.toFixed(0);
-  dom.m_light.textContent = l;
-  dom.m_soil.textContent = soil;
-
-  sensorSnapshot = { temperature: t, humidity: h, light: l, soil: soil };
-
-  if(dom.monitorPage.style.display === 'block' && confirmedPlant){
-    updateMonitorComments();
-  }
-}
-
-/* ---------- Suggest logic (exact thresholds, alphabetical) ---------- */
-function findSuitable(temp, hum){
-  return PLANTS.filter(p => temp >= p.tempMin && temp <= p.tempMax && hum >= p.humMin && hum <= p.humMax)
-               .sort((a,b)=> a.name.localeCompare(b.name));
-}
-
-dom.btnSuggest.addEventListener('click', ()=>{
-  const t = parseFloat(dom.s_temp.textContent);
-  const h = parseFloat(dom.s_hum.textContent);
-  const list = findSuitable(t,h);
-  dom.suitableList.innerHTML = '';
-  selectedFromSuggest = null;
-  dom.confirmSuggest.disabled = true;
-
-  if(list.length === 0){
-    dom.suitableList.innerHTML = `<div class="muted" style="padding:10px">No exact matches found.</div>`;
-  } else {
-    list.forEach(p=>{
-      const item = document.createElement('div');
-      item.className = 'list-item';
-      item.textContent = `${p.name} — ${p.tempMin}–${p.tempMax}°C, ${p.humMin}–${p.humMax}%`;
-      item.tabIndex = 0;
-      item.addEventListener('click', ()=>{
-        Array.from(dom.suitableList.querySelectorAll('.list-item')).forEach(x=> x.classList.remove('selected'));
-        item.classList.add('selected');
-        selectedFromSuggest = p;
-        dom.confirmSuggest.disabled = false;
-      });
-      dom.suitableList.appendChild(item);
-    });
-  }
-
-  dom.suggestArea.style.display = 'block';
-  dom.alreadyArea.style.display = 'none';
-  document.body.classList.add('lock-scroll');
-});
-
-dom.backSuggest.addEventListener('click', ()=>{
-  dom.suggestArea.style.display = 'none';
-  selectedFromSuggest = null;
-  dom.confirmSuggest.disabled = true;
-  document.body.classList.remove('lock-scroll');
-});
-
-dom.confirmSuggest.addEventListener('click', ()=>{
-  if(!selectedFromSuggest) return;
-  confirmedPlant = selectedFromSuggest;
-  localStorage.setItem('confirmedPlant', JSON.stringify(confirmedPlant));
-  dom.monPlant.textContent = confirmedPlant.name;
-  dom.suggestArea.style.display = 'none';
-  document.body.classList.remove('lock-scroll');
-  applyHealthButtonState();
-  showMonitor();
-  updateMonitorComments();
-});
-
-/* ---------- Already planted (search only, alphabetical) ---------- */
-const ALPH_NAMES = PLANTS.map(p=>p.name).sort((a,b)=> a.localeCompare(b));
-dom.btnAlready.addEventListener('click', ()=>{
-  dom.alreadyArea.style.display = 'block';
-  dom.suggestArea.style.display = 'none';
-  dom.searchInput.value = '';
-  dom.searchResults.innerHTML = '';
-  selectedExisting = null;
-  dom.selectExisting.disabled = true;
-});
-
-dom.backExisting.addEventListener('click', ()=>{
-  dom.alreadyArea.style.display = 'none';
-  dom.searchResults.innerHTML = '';
-  dom.searchInput.value = '';
-  selectedExisting = null;
-  dom.selectExisting.disabled = true;
-});
-
-dom.searchInput.addEventListener('input', ()=>{
-  const q = dom.searchInput.value.trim().toLowerCase();
-  dom.searchResults.innerHTML = '';
-  selectedExisting = null;
-  dom.selectExisting.disabled = true;
-  if(!q) return;
-  const matches = ALPH_NAMES.filter(n => n.toLowerCase().includes(q));
-  if(matches.length === 0){
-    const div = document.createElement('div'); div.className='suggestion-entry'; div.textContent='This plant is not in our database yet'; dom.searchResults.appendChild(div);
-    return;
-  }
-  matches.forEach(name=>{
-    const div = document.createElement('div'); div.className='suggestion-entry'; div.textContent = name;
-    div.addEventListener('click', ()=>{
-      Array.from(dom.searchResults.querySelectorAll('.suggestion-entry')).forEach(x=> x.style.background='');
-      div.style.background = '#eef5ff';
-      selectedExisting = PLANTS.find(p => p.name === name);
-      dom.selectExisting.disabled = false;
-    });
-    dom.searchResults.appendChild(div);
+  // ----------------- Live Data Listener -----------------
+  const gardenRef = db.ref('/garden');
+  gardenRef.on('value', (snapshot) => {
+    const data = snapshot.val();
+    if (!data) return;
+    // Setup page
+    document.getElementById("s_temp").textContent  = data.temperature?.toFixed(1) ?? "--";
+    document.getElementById("s_hum").textContent   = data.humidity?.toFixed(0) ?? "--";
+    document.getElementById("s_light").textContent = data.light?.toFixed(0) ?? "--";
+    document.getElementById("s_soil").textContent  = data.soil?.toFixed(0) ?? "--";
+    // Monitor page
+    document.getElementById("m_temp").textContent  = data.temperature?.toFixed(1) ?? "--";
+    document.getElementById("m_hum").textContent   = data.humidity?.toFixed(0) ?? "--";
+    document.getElementById("m_light").textContent = data.light?.toFixed(0) ?? "--";
+    document.getElementById("m_soil").textContent  = data.soil?.toFixed(0) ?? "--";
   });
-});
 
-dom.selectExisting.addEventListener('click', ()=>{
-  if(!selectedExisting) return;
-  confirmedPlant = selectedExisting;
-  localStorage.setItem('confirmedPlant', JSON.stringify(confirmedPlant));
-  dom.monPlant.textContent = confirmedPlant.name;
-  dom.alreadyArea.style.display = 'none';
-  applyHealthButtonState();
-  showMonitor();
-  updateMonitorComments();
-});
+  // ----------------- Welcome Screen Logic -----------------
+  function showWelcome() {
+    const domWelcome = document.getElementById('welcome');
+    const domApp = document.getElementById('app');
+    domWelcome.style.opacity = '1';
+    domApp.style.display = 'none';
+    const proceed = () => {
+  domWelcome.style.opacity = '0';
+  setTimeout(() => {
+    domWelcome.style.display = 'none';
+    domWelcome.setAttribute('aria-hidden','true'); // accessibility fix
+    domApp.style.display = 'block';
+  }, 900);
 
-/* ---------- Monitor comments & actions ---------- */
-function updateMonitorComments(){
-  if(!confirmedPlant){ dom.monitorComments.textContent = 'No plant selected.'; return; }
-  const temp = parseFloat(dom.m_temp.textContent);
-  const hum = parseFloat(dom.m_hum.textContent);
-  const soil = parseFloat(dom.m_soil.textContent);
-  const light = parseFloat(dom.m_light.textContent);
-
-  const msgs = [];
-  if(temp < confirmedPlant.tempMin) msgs.push('Temperature is below ideal range.');
-  else if(temp > confirmedPlant.tempMax) msgs.push('Temperature is above ideal range.');
-  else msgs.push('Temperature within ideal range.');
-
-  if(hum < confirmedPlant.humMin) msgs.push('Humidity is below ideal range.');
-  else if(hum > confirmedPlant.humMax) msgs.push('Humidity is above ideal range.');
-  else msgs.push('Humidity within ideal range.');
-
-  if(soil < 30) msgs.push('Soil is dry — water the plant.');
-  if(light < 200) msgs.push('Light is low — move to brighter place.');
-
-  dom.monitorComments.textContent = msgs.join(' ');
-}
-
-dom.waterBtn.addEventListener('click', ()=> alert('Water pump triggered (simulated).'));
-dom.autoBtn.addEventListener('click', ()=> { autoModeOn = !autoModeOn; dom.autoBtn.textContent = `Auto Mode: ${autoModeOn? 'ON':'OFF'}`; });
-dom.monitorBackBtn.addEventListener('click', ()=> showMain());
-dom.btnSetupBack.addEventListener('click', ()=> showMain());
-
-/* ---------- initial state ---------- */
-function init(){
-  dom.app.style.display = 'block';
-  applyHealthButtonState();
-  if(confirmedPlant){
-    dom.monPlant.textContent = confirmedPlant.name;
+      ['click','wheel','keydown','touchstart'].forEach(e=> window.removeEventListener(e, proceed));
+    };
+    ['click','wheel','keydown','touchstart'].forEach(e=> window.addEventListener(e, proceed, { once:true }));
   }
-  showMain();
+  showWelcome();
+
+  // --- UI wiring (paste near bottom of your script) ---
+const setupBtn  = document.getElementById('gotoSetup');
+const healthBtn = document.getElementById('gotoHealth');
+const clearBtn  = document.getElementById('clearAll');
+
+const mainPage   = document.getElementById('mainPage');
+const setupPage  = document.getElementById('setupPage');
+const monitorPage= document.getElementById('monitorPage');
+
+function showPage(pageEl){
+  // hide all
+  mainPage.style.display   = 'none';
+  setupPage.style.display  = 'none';
+  monitorPage.style.display= 'none';
+  // show requested
+  document.getElementById(pageEl).style.display = 'block';
 }
-init();
+
+// wire buttons
+setupBtn.addEventListener('click', () => showPage('setupPage'));
+
+// enable and wire health button (was disabled in markup)
+healthBtn.disabled = false;
+healthBtn.addEventListener('click', () => showPage('monitorPage'));
+
+// Clear data with confirmation and safe UI feedback
+clearBtn.addEventListener('click', () => {
+  const ok = confirm('Delete all `/garden` data from Firebase? This action cannot be undone.');
+  if (!ok) return;
+  clearBtn.disabled = true;
+  clearBtn.textContent = 'Clearing...';
+  db.ref('/garden').remove()
+    .then(() => {
+      // reset UI values locally
+      ['s_temp','s_hum','s_light','s_soil','m_temp','m_hum','m_light','m_soil','monPlant']
+        .forEach(id => { const el = document.getElementById(id); if (el) el.textContent = '--'; });
+      clearBtn.textContent = 'Clear Data';
+      clearBtn.disabled = false;
+      alert('Garden data removed.');
+    })
+    .catch(err => {
+      clearBtn.textContent = 'Clear Data';
+      clearBtn.disabled = false;
+      alert('Failed to clear data: ' + (err && err.message ? err.message : err));
+    });
+});
+
+  // ----------------- Add UI Navigation and Features Below -----------------
+  // Add your existing UI logic here as needed
 
 </script>
 </body>
 </html>
+
