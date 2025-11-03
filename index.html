@@ -1,87 +1,152 @@
-<html>
-  <head>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <style>
-      body {
-        margin: 0;
-        font-family: 'Roboto', sans-serif;
-        background-color: #f5f5f5;
-        color: #222;
-      }
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Im-Plant | Smart Gardening System</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --green:#2e7d32;
+  --accent:#4CAF50;
+  --bg:#f5f5f5;
+  --card:#ffffff;
+  --muted:#666;
+  --danger:#c62828;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Roboto,system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:#111}
+#app{max-width:1000px;margin:40px auto;padding:16px}
+#welcome{
+  position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+  flex-direction:column; gap:8px; background:var(--green); color:white;
+  z-index:9999; opacity:0; transition:opacity 1s;
+}
+#welcome h1{font-size:96px; margin:0; font-weight:700; text-align:center}
+#welcome h2{font-size:20px;margin:0;font-weight:400}
+.container{max-width:980px;margin:120px auto 40px;padding:0 16px}
+.title{font-size:28px;margin:0 0 18px 0;text-align:center}
+.center-row{display:flex; gap:14px; justify-content:center; align-items:center; flex-wrap:wrap}
+button{padding:10px 16px;border-radius:8px;border:0;cursor:pointer;font-size:16px}
+.btn-primary{background:var(--accent); color:#fff}
+.btn-back{background:#666;color:#fff}
+.btn-danger{background:var(--danger); color:#fff}
+.card{background:var(--card); padding:16px; border-radius:10px; box-shadow:0 6px 18px rgba(0,0,0,0.06); text-align:left}
+.sensors{min-width:320px; max-width:420px}
+.controls{min-width:320px; max-width:420px}
+.sensors p, .monitor p{margin:8px 0; font-size:16px}
+.muted{color:var(--muted); font-size:14px}
+@media (max-width:760px){
+  #welcome h1{font-size:48px}
+  .container{margin-top:80px;padding:12px}
+  .sensors,.controls{width:100%}
+}
+</style>
+</head>
+<body>
 
-      .welcome {
-        height: 100vh;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        text-align: center;
-      }
+<!-- Welcome -->
+<div id="welcome" aria-hidden="false">
+  <h1>Welcome to Im-Plant</h1>
+  <h2 class="muted">Interact (click / scroll / key / touch) to continue</h2>
+</div>
 
-      .welcome h2 {
-        font-weight: 400;
-        font-size: 28px;
-        margin: 0;
-      }
+<div id="app" class="container" style="display:none">
+  <section id="mainPage">
+    <h2 class="title">Smart Gardening System</h2>
+    <div class="center-row">
+      <button id="gotoSetup" class="btn-primary">Plant Setup</button>
+      <button id="gotoHealth" class="btn-back" disabled>Plant Health</button>
+    </div>
+    <div class="center-row" style="margin-top:12px">
+      <button id="clearAll" class="btn-danger">Clear Data</button>
+    </div>
+  </section>
 
-      .welcome h1 {
-        font-weight: 700;
-        font-size: 96px;
-        margin: 10px 0 0 0;
-      }
+  <section id="setupPage" style="display:none; margin-top:20px">
+    <h3 class="title">Plant Setup</h3>
+    <div class="card">
+      <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
+        <div class="sensors">
+          <h4 style="margin-top:0">Live Sensor Data</h4>
+          <p>🌡️ Temperature: <strong id="s_temp">--</strong> °C</p>
+          <p>💧 Humidity: <strong id="s_hum">--</strong> %</p>
+          <p>☀️ Light: <strong id="s_light">--</strong> lx</p>
+          <p>🌱 Soil Moisture: <strong id="s_soil">--</strong> %</p>
+          <p class="muted">Sensor values update via Firebase live data.</p>
+        </div>
+        <div class="controls">
+          <!-- Add plant suggestion/selection buttons here -->
+        </div>
+      </div>
+    </div>
+  </section>
 
-      .dashboard {
-        min-height: 100vh;
-        text-align: center;
-        padding-top: 80px;
-      }
+  <section id="monitorPage" style="display:none; margin-top:20px">
+    <h3 class="title">Plant Monitoring</h3>
+    <div class="monitor card">
+      <p><strong>Plant:</strong> <span id="monPlant">—</span></p>
+      <p>🌡️ Temperature: <strong id="m_temp">--</strong> °C</p>
+      <p>💧 Humidity: <strong id="m_hum">--</strong> %</p>
+      <p>☀️ Light: <strong id="m_light">--</strong> lx</p>
+      <p>🌱 Soil Moisture: <strong id="m_soil">--</strong> %</p>
+      <p id="monitorComments" class="muted" style="margin-top:10px">Comments will appear here based on sensor data.</p>
+    </div>
+  </section>
+</div>
 
-      .dashboard h1 {
-        font-size: 60px;
-        font-weight: 700;
-        margin-bottom: 30px;
-      }
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script>
+  // ----------------- Firebase Setup -----------------
+  const firebaseConfig = {
+    apiKey: "AIzaSyA2lx9dz9n_U3yjGzedewfYx_zHRp-qKRY",
+    authDomain: "im-plant-bracu.firebaseapp.com",
+    databaseURL: "https://im-plant-bracu-default-rtdb.asia-southeast1.firebasedatabase.app",
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
 
-      .dashboard p {
-        font-size: 22px;
-        font-weight: 400;
-        margin: 10px 0;
-      }
-    </style>
-  </head>
-  <body>
-    <!-- Intro section -->
-    <section class="welcome">
-      <h2>Welcome to</h2>
-      <h1>Im-Plant</h1>
-    </section>
+  // ----------------- Live Data Listener -----------------
+  const gardenRef = db.ref('/garden');
+  gardenRef.on('value', (snapshot) => {
+    const data = snapshot.val();
+    if (!data) return;
+    // Setup page
+    document.getElementById("s_temp").textContent  = data.temperature?.toFixed(1) ?? "--";
+    document.getElementById("s_hum").textContent   = data.humidity?.toFixed(0) ?? "--";
+    document.getElementById("s_light").textContent = data.light?.toFixed(0) ?? "--";
+    document.getElementById("s_soil").textContent  = data.soil?.toFixed(0) ?? "--";
+    // Monitor page
+    document.getElementById("m_temp").textContent  = data.temperature?.toFixed(1) ?? "--";
+    document.getElementById("m_hum").textContent   = data.humidity?.toFixed(0) ?? "--";
+    document.getElementById("m_light").textContent = data.light?.toFixed(0) ?? "--";
+    document.getElementById("m_soil").textContent  = data.soil?.toFixed(0) ?? "--";
+  });
 
-    <!-- Dashboard section -->
-    <section class="dashboard">
-      <h1>Smart Garden Dashboard</h1>
-      <p>Temperature: <span id="temp"></span> °C</p>
-      <p>Humidity: <span id="hum"></span> %</p>
-      <p>Soil: <span id="soil"></span></p>
-      <p>Light: <span id="light"></span> lx</p>
-    </section>
+  // ----------------- Welcome Screen Logic -----------------
+  function showWelcome() {
+    const domWelcome = document.getElementById('welcome');
+    const domApp = document.getElementById('app');
+    domWelcome.style.opacity = '1';
+    domApp.style.display = 'none';
+    const proceed = () => {
+      domWelcome.style.opacity = '0';
+      setTimeout(() => {
+        domWelcome.style.display = 'none';
+        domApp.style.display = 'block';
+      }, 900);
+      ['click','wheel','keydown','touchstart'].forEach(e=> window.removeEventListener(e, proceed));
+    };
+    ['click','wheel','keydown','touchstart'].forEach(e=> window.addEventListener(e, proceed, { once:true }));
+  }
+  showWelcome();
 
-    <script>
-      const firebaseConfig = {
-        apiKey: "AIzaSyA2lx9dz9n_U3yjGzedewfYx_zHRp-qKRY",
-        databaseURL: "https://im-plant-bracu-default-rtdb.asia-southeast1.firebasedatabase.app/"
-      };
-      const app = firebase.initializeApp(firebaseConfig);
-      const db = firebase.database();
+  // ----------------- Add UI Navigation and Features Below -----------------
+  // Add your existing UI logic here as needed
 
-      db.ref("/garden").on("value", snapshot => {
-        const data = snapshot.val();
-        document.getElementById("temp").textContent = data.temperature;
-        document.getElementById("hum").textContent = data.humidity;
-        document.getElementById("soil").textContent = data.soil;
-        document.getElementById("light").textContent = data.light;
-      });
-    </script>
-  </body>
+</script>
+</body>
 </html>
+
+
