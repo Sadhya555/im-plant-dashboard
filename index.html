@@ -1,446 +1,195 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Smart Gardening Dashboard</title>
-  <style>
-    :root{--bg:#f4f7fb;--card:#fff;--accent:#2b8aef;--muted:#6b7280}
-    body{font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:var(--bg); margin:0; color:#111}
-    header{background:linear-gradient(90deg,var(--accent),#4aa3ff); color:white; padding:18px 24px}
-    .container{max-width:980px;margin:20px auto;padding:0 16px}
-    .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
-    .card{background:var(--card);border-radius:12px;padding:16px;box-shadow:0 6px 18px rgba(15,23,42,0.06)}
-    .row{display:flex;gap:12px;align-items:center}
-    .big{font-size:28px;font-weight:700}
-    .muted{color:var(--muted)}
-    .btn{background:var(--accent);color:white;border:none;padding:8px 12px;border-radius:8px;cursor:pointer}
-    .btn.alt{background:#eef2ff;color:var(--accent);border:1px solid #dbeafe}
-    .pill{background:#eef2f7;padding:6px 10px;border-radius:999px}
-    input[type=text], select{padding:8px;border-radius:8px;border:1px solid #e6e9ef;width:100%}
-    .sensor-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
-    .suggest-list{list-style:none;padding:0;margin:8px 0}
-    .suggest-list li{padding:8px;border-radius:8px;border:1px dashed #e6eef9;margin-bottom:8px;cursor:pointer}
-    footer{margin:40px 0;text-align:center;color:var(--muted)}
-    .switch{display:inline-flex;align-items:center;gap:8px}
-  </style>
-</head>
-<body>
-  <header>
-    <div class="container row">
-      <div style="flex:1">
-        <div style="font-weight:700">Smart Gardening System</div>
-        <div class="muted" style="font-size:13px">Dashboard — monitor sensors & control watering</div>
-      </div>
-      <div>
-        <button class="btn" onclick="goTo('setup')">Plant Setup</button>
-        <button class="btn alt" onclick="goTo('health')">Plant Health</button>
-      </div>
-    </div>
-  </header>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js
+"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js
+"></script>
 
-  <main class="container">
-    <!-- HOME / DASHBOARD -->
-    <section id="home" class="card" style="display:block;margin-bottom:16px">
-      <div class="row" style="justify-content:space-between">
-        <div>
-          <div class="big">Live Sensor Readings</div>
-          <div class="muted">Data updates every 5 seconds</div>
-        </div>
-        <div class="pill" id="selectedPlantDisplay">No plant selected</div>
-      </div>
+<script>
+  /*********** CONFIGURE THIS ************/
+  const firebaseConfig = {
+    apiKey: "AIzaSyA2lx9dz9n_U3yjGzedewfYx_zHRp-qKRY",
+    authDomain: "im-plant-bracu.firebaseapp.com",
+    databaseURL: "https://im-plant-bracu-default-rtdb.asia-southeast1.firebasedatabase.app
+",
+    projectId: "im-plant-bracu",
+    storageBucket: "im-plant-bracu.firebasestorage.app",
+    messagingSenderId: "1029559598764",
+    appId: "1:1029559598764:web:4999edd794489312c1a909",
+    measurementId: "G-C8PK5GDPD4"
+  };
+  /****************************************/
 
-      <div style="height:12px"></div>
-      <div class="sensor-grid">
-        <div class="card">
-          <div class="muted">Temperature</div>
-          <div id="tempVal" class="big">-- °C</div>
-        </div>
-        <div class="card">
-          <div class="muted">Humidity</div>
-          <div id="humVal" class="big">-- %</div>
-        </div>
-        <div class="card">
-          <div class="muted">Light</div>
-          <div id="lightVal" class="big">-- lx</div>
-        </div>
-        <div class="card">
-          <div class="muted">Soil Moisture</div>
-          <div id="moistVal" class="big">-- %</div>
-        </div>
-      </div>
-    </section>
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
 
-    <!-- PLANT SETUP -->
-    <section id="setup" class="card" style="display:none;margin-bottom:16px">
-      <div class="big">Plant Setup</div>
-      <div class="muted">Choose to get suggestions or pick the plant you already planted.</div>
-      <div style="height:12px"></div>
+  // --- UI helpers ---
+  function goTo(page){
+    document.getElementById('home').style.display = page==='home' ? 'block':'none';
+    document.getElementById('setup').style.display = page==='setup' ? 'block':'none';
+    document.getElementById('health').style.display = page==='health' ? 'block':'none';
+  }
 
-      <div class="row" style="gap:16px">
-        <div style="flex:1" class="card">
-          <div style="font-weight:600">Get Plant Suggestion</div>
-          <div class="muted" style="font-size:13px">We will read current sensor data and suggest 2–3 plants suitable for this environment.</div>
-          <div style="height:8px"></div>
-          <button class="btn" onclick="getSuggestions()">Suggest Plants</button>
+  const plants = ['Tomato','Mint','Spinach','Cactus','Rose','Basil','Chili','Lettuce'];
+  const dd = document.getElementById('plantDropdown');
+  plants.forEach(p=>{const o=document.createElement('option');o.value=p;o.textContent=p;dd.appendChild(o);});
 
-          <ul id="suggestions" class="suggest-list"></ul>
-          <div id="suggestionConfirm" style="display:none">
-            <div style="height:8px"></div>
-            <button class="btn" onclick="confirmSelectedSuggestion()">Confirm Selected Plant</button>
-          </div>
-        </div>
+  // ----------------- Live sensor read -----------------
+  let latestSensors = {temperature:null,humidity:null,light:null,soil:null};
+  function readSensorsFromDB(){
+    db.ref('garden').once('value').then(snap=>{
+      const v = snap.val()||{};
+      latestSensors.temperature = v.temperature ?? latestSensors.temperature;
+      latestSensors.humidity = v.humidity ?? latestSensors.humidity;
+      latestSensors.light = v.light ?? latestSensors.light;
+      latestSensors.soil = v.soil ?? latestSensors.soil;
+      updateSensorUI();
+    }).catch(err=>console.error('readSensors',err));
+  }
 
-        <div style="flex:1" class="card">
-          <div style="font-weight:600">Already Planted One</div>
-          <div class="muted" style="font-size:13px">Search or select the plant you already have.</div>
-          <div style="height:8px"></div>
-          <input id="plantSearch" type="text" placeholder="Type or search..." oninput="filterPlants()" />
-          <div style="height:8px"></div>
-          <select id="plantDropdown" size="6" style="height:180px"></select>
-          <div style="height:8px"></div>
-          <button class="btn" onclick="confirmSelectedFromDropdown()">Confirm Plant</button>
-        </div>
-      </div>
-    </section>
+  function updateSensorUI(){
+    document.getElementById('tempVal').textContent = latestSensors.temperature===null?'-- °C':latestSensors.temperature+' °C';
+    document.getElementById('humVal').textContent = latestSensors.humidity===null?'-- %':latestSensors.humidity+' %';
+    document.getElementById('lightVal').textContent = latestSensors.light===null?'-- lx':latestSensors.light+' lx';
+    document.getElementById('moistVal').textContent = latestSensors.soil===null?'-- %':latestSensors.soil+' %';
 
-    <!-- PLANT HEALTH -->
-    <section id="health" class="card" style="display:none">
-      <div class="row" style="justify-content:space-between">
-        <div>
-          <div class="big">Plant Health Monitoring</div>
-          <div class="muted">Live advice & watering controls</div>
-        </div>
-        <div class="switch">
-          <label class="muted">Auto Mode</label>
-          <input type="checkbox" id="autoMode" onchange="toggleAutoMode(this.checked)" />
-        </div>
-      </div>
+    // Duplicate to health section
+    document.getElementById('hTemp').textContent = document.getElementById('tempVal').textContent;
+    document.getElementById('hHum').textContent = document.getElementById('humVal').textContent;
+    document.getElementById('hLight').textContent = document.getElementById('lightVal').textContent;
+    document.getElementById('hMoist').textContent = document.getElementById('moistVal').textContent;
 
-      <div style="height:12px"></div>
-      <div class="row" style="gap:16px">
-        <div style="flex:1" class="card">
-          <div class="muted">Monitored Plant</div>
-          <div id="monitoredPlant" class="big">--</div>
+    evaluateAdvice();
+  }
 
-          <div style="height:12px"></div>
-          <div class="muted">Live sensor readings</div>
-          <div class="sensor-grid" style="margin-top:8px">
-            <div class="card">
-              <div class="muted">Temp</div>
-              <div id="hTemp">-- °C</div>
-            </div>
-            <div class="card">
-              <div class="muted">Humidity</div>
-              <div id="hHum">-- %</div>
-            </div>
-            <div class="card">
-              <div class="muted">Light</div>
-              <div id="hLight">-- lx</div>
-            </div>
-            <div class="card">
-              <div class="muted">Moisture</div>
-              <div id="hMoist">-- %</div>
-            </div>
-          </div>
+  setInterval(readSensorsFromDB,5000);
+  readSensorsFromDB();
 
-          <div style="height:12px"></div>
-          <div class="muted">Advice</div>
-          <div id="adviceBox" class="card" style="margin-top:8px">No advice yet.</div>
-        </div>
+  // ----------------- Plant selection & suggestion -----------------
+  let currentSuggestions = [];
+  let selectedSuggestion = null;
 
-        <div style="width:320px" class="card">
-          <div style="font-weight:600">Watering Controls</div>
-          <div style="height:8px"></div>
-          <button class="btn" onclick="manualWater()">Water the Plant (Manual)</button>
-          <div style="height:12px"></div>
-          <div class="muted">Auto Mode Thresholds</div>
-          <div style="height:8px"></div>
-          <label>Auto start if moisture &lt; </label>
-          <input id="autoStart" type="text" value="30" style="width:60px;margin-left:8px" /> <span class="muted">%</span>
-          <div style="height:8px"></div>
-          <label>Stop watering when moisture &gt;= </label>
-          <input id="autoStop" type="text" value="98" style="width:60px;margin-left:8px" /> <span class="muted">%</span>
+  function getSuggestions(){
+    db.ref('garden').once('value').then(snap=>{
+      const s = snap.val()||{};
+      const temp=s.temperature??25, hum=s.humidity??50, light=s.light??300, soil=s.soil??50;
+      currentSuggestions = suggestPlants(temp,hum,light,soil);
+      renderSuggestions();
+    });
+  }
 
-          <div style="height:12px"></div>
-          <div class="muted">Pump Status</div>
-          <div id="pumpStatus" class="big">OFF</div>
-          <div style="height:8px"></div>
-          <div class="muted">Logs</div>
-          <div id="logBox" style="height:140px;overflow:auto;border:1px solid #eef2ff;padding:8px;border-radius:8px;margin-top:8px;background:#fbfdff"></div>
-        </div>
-      </div>
-    </section>
-
-    <footer>Make sure to update the Firebase config in the script section before using. ESP32 should listen to /commands/pump and write sensors to /sensors/</footer>
-  </main>
-
-  <!-- Firebase SDK (8.x compat) -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-
-  <script>
-    /*********** CONFIGURE THIS ************/
-    // Replace the below config object with your Firebase project's config
-    const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT.firebaseapp.com",
-      databaseURL: "https://im-plant-bracu-default-rtdb.asia-southeast1.firebasedatabase.app",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT.appspot.com",
-      messagingSenderId: "YOUR_SENDER_ID",
-      appId: "YOUR_APP_ID"
-    };
-    /****************************************/
-
-    // Initialize Firebase
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-
-    // --- UI helpers ---
-    function goTo(page){
-      document.getElementById('home').style.display = page==='home' ? 'block':'none';
-      document.getElementById('setup').style.display = page==='setup' ? 'block':'none';
-      document.getElementById('health').style.display = page==='health' ? 'block':'none';
-    }
-
-    // plant list (expand as needed)
-    const plants = [
-      'Tomato','Mint','Spinach','Cactus','Rose','Basil','Chili','Lettuce'
+  function suggestPlants(temp,hum,light,soil){
+    const candidates=[
+      {name:'Tomato',ideal:{temp:[20,30],hum:[50,80],light:[400,10000],soil:[40,70]}},
+      {name:'Mint',ideal:{temp:[15,28],hum:[50,90],light:[200,800],soil:[45,80]}},
+      {name:'Spinach',ideal:{temp:[10,25],hum:[50,85],light:[200,600],soil:[50,80]}},
+      {name:'Cactus',ideal:{temp:[20,40],hum:[0,40],light:[500,10000],soil:[0,30]}},
+      {name:'Basil',ideal:{temp:[18,30],hum:[40,80],light:[300,900],soil:[40,70]}},
+      {name:'Rose',ideal:{temp:[15,30],hum:[40,70],light:[400,10000],soil:[45,75]}}
     ];
-
-    // populate dropdown
-    const dd = document.getElementById('plantDropdown');
-    plants.forEach(p=>{ const o=document.createElement('option'); o.value=p; o.textContent=p; dd.appendChild(o); });
-
-    // ----------------- Live sensor read -----------------
-    let latestSensors = {temperature:null,humidity:null,light:null,moisture:null};
-    function readSensorsFromDB(){
-      db.ref('sensors').once('value').then(snap=>{
-        const v = snap.val()||{};
-        latestSensors.temperature = v.temperature ?? latestSensors.temperature;
-        latestSensors.humidity = v.humidity ?? latestSensors.humidity;
-        latestSensors.light = v.light ?? latestSensors.light;
-        latestSensors.moisture = v.moisture ?? latestSensors.moisture;
-        updateSensorUI();
-      }).catch(err=>console.error('readSensors',err));
+    function score(p){
+      const I=p.ideal;let s=0;
+      if(temp>=I.temp[0]&&temp<=I.temp[1])s+=3;
+      if(hum>=I.hum[0]&&hum<=I.hum[1])s+=2;
+      if(light>=I.light[0]&&light<=I.light[1])s+=2;
+      if(soil>=I.soil[0]&&soil<=I.soil[1])s+=3;
+      return s;
     }
+    const scored=candidates.map(c=>({name:c.name,score:score(c)})).sort((a,b)=>b.score-a.score);
+    return scored.slice(0,3).map(s=>s.name);
+  }
 
-    function updateSensorUI(){
-      document.getElementById('tempVal').textContent = (latestSensors.temperature===null)?'-- °C':latestSensors.temperature+ ' °C';
-      document.getElementById('humVal').textContent = (latestSensors.humidity===null)?'-- %':latestSensors.humidity+ ' %';
-      document.getElementById('lightVal').textContent = (latestSensors.light===null)?'-- lx':latestSensors.light+ ' lx';
-      document.getElementById('moistVal').textContent = (latestSensors.moisture===null)?'-- %':latestSensors.moisture+ ' %';
-
-      // health page duplicates
-      document.getElementById('hTemp').textContent = latestSensors.temperature===null?'-- °C':latestSensors.temperature+' °C';
-      document.getElementById('hHum').textContent = latestSensors.humidity===null?'-- %':latestSensors.humidity+' %';
-      document.getElementById('hLight').textContent = latestSensors.light===null?'-- lx':latestSensors.light+' lx';
-      document.getElementById('hMoist').textContent = latestSensors.moisture===null?'-- %':latestSensors.moisture+' %';
-
-      evaluateAdvice();
-    }
-
-    // poll sensors every 5 seconds
-    setInterval(readSensorsFromDB,5000);
-    readSensorsFromDB();
-
-    // ----------------- Suggestion logic -----------------
-    let currentSuggestions = [];
-    let selectedSuggestion = null;
-
-    function getSuggestions(){
-      // read latest instantly then compute
-      db.ref('sensors').once('value').then(snap=>{
-        const s = snap.val()||{};
-        const temp = s.temperature ?? 25;
-        const hum = s.humidity ?? 50;
-        const light = s.light ?? 300;
-        const moist = s.moisture ?? 50;
-        currentSuggestions = suggestPlants(temp,hum,light,moist);
-        renderSuggestions();
-      });
-    }
-
-    function suggestPlants(temp,hum,light,moist){
-      // naive scoring system: give points to candidate plants
-      const candidates = [
-        {name:'Tomato', ideal:{temp:[20,30],hum:[50,80],light: [400,10000],moist:[40,70]}},
-        {name:'Mint', ideal:{temp:[15,28],hum:[50,90],light:[200,800],moist:[45,80]}},
-        {name:'Spinach', ideal:{temp:[10,25],hum:[50,85],light:[200,600],moist:[50,80]}},
-        {name:'Cactus', ideal:{temp:[20,40],hum:[0,40],light:[500,10000],moist:[0,30]}},
-        {name:'Basil', ideal:{temp:[18,30],hum:[40,80],light:[300,900],moist:[40,70]}},
-        {name:'Rose', ideal:{temp:[15,30],hum:[40,70],light:[400,10000],moist:[45,75]}},
-      ];
-
-      function scorePlant(pl){
-        let score=0;
-        const I=pl.ideal;
-        if(temp>=I.temp[0] && temp<=I.temp[1]) score+=3;
-        if(hum>=I.hum[0] && hum<=I.hum[1]) score+=2;
-        if(light>=I.light[0] && light<=I.light[1]) score+=2;
-        if(moist>=I.moist[0] && moist<=I.moist[1]) score+=3;
-        return score;
-      }
-
-      const scored = candidates.map(c=>({name:c.name,score:scorePlant(c)}));
-      scored.sort((a,b)=>b.score-a.score);
-      return scored.slice(0,3).map(s=>s.name);
-    }
-
-    function renderSuggestions(){
-      const ul = document.getElementById('suggestions'); ul.innerHTML='';
-      currentSuggestions.forEach(name=>{
-        const li = document.createElement('li'); li.textContent = name; li.onclick = ()=>{ selectSuggestion(name,li); };
-        ul.appendChild(li);
-      });
-      document.getElementById('suggestionConfirm').style.display = 'block';
-    }
-
-    function selectSuggestion(name,el){
-      selectedSuggestion = name;
-      // highlight selection
-      document.querySelectorAll('#suggestions li').forEach(li=>li.style.borderColor='#e6eef9');
-      el.style.borderColor='#2b8aef';
-    }
-
-    function confirmSelectedSuggestion(){
-      if(!selectedSuggestion){ alert('Please select a suggestion first'); return; }
-      db.ref('selectedPlant').set(selectedSuggestion).then(()=>{
-        log('Selected plant: '+selectedSuggestion);
-        document.getElementById('selectedPlantDisplay').textContent = selectedSuggestion;
-        document.getElementById('monitoredPlant').textContent = selectedSuggestion;
-        goTo('health');
-      });
-    }
-
-    // ----------------- Already planted flow -----------------
-    function filterPlants(){
-      const q = document.getElementById('plantSearch').value.toLowerCase();
-      const dd = document.getElementById('plantDropdown'); dd.innerHTML='';
-      plants.filter(p=>p.toLowerCase().includes(q)).forEach(p=>{ const o=document.createElement('option'); o.value=p; o.textContent=p; dd.appendChild(o); });
-    }
-
-    function confirmSelectedFromDropdown(){
-      const dd = document.getElementById('plantDropdown');
-      const val = dd.value || document.getElementById('plantSearch').value;
-      if(!val){ alert('Choose or type a plant name'); return; }
-      db.ref('selectedPlant').set(val).then(()=>{
-        log('Manually selected plant: '+val);
-        document.getElementById('selectedPlantDisplay').textContent = val;
-        document.getElementById('monitoredPlant').textContent = val;
-        goTo('health');
-      });
-    }
-
-    // ----------------- Advice engine -----------------
-    function evaluateAdvice(){
-      // read selectedPlant
-      db.ref('selectedPlant').once('value').then(snap=>{
-        const plant = snap.val();
-        document.getElementById('monitoredPlant').textContent = plant || '--';
-        if(!plant) { document.getElementById('adviceBox').textContent = 'No plant selected. Go to Plant Setup.'; return; }
-
-        const t = latestSensors.temperature ?? 0;
-        const h = latestSensors.humidity ?? 0;
-        const l = latestSensors.light ?? 0;
-        const m = latestSensors.moisture ?? 0;
-
-        // Basic rules per plant - example
-        const adv = [];
-        // check moisture
-        if(m < 30) adv.push('Soil is dry — water the plant.');
-        else if(m > 85) adv.push('Soil moisture is high — avoid watering for now.');
-        else adv.push('Soil moisture is adequate.');
-
-        // temperature recommendations
-        if(t < 15) adv.push('Temperature is low — consider keeping the plant warmer.');
-        else if(t > 35) adv.push('Temperature is high — provide shade or cooling.');
-        else adv.push('Temperature is within a comfortable range.');
-
-        // light
-        if(l < 200) adv.push('Light is low — move to a brighter spot.');
-        else if(l > 8000) adv.push('Too bright — provide partial shade if necessary.');
-        else adv.push('Light levels are acceptable.');
-
-        // humidity
-        if(h < 30) adv.push('Air humidity is low — misting can help many plants.');
-
-        document.getElementById('adviceBox').innerHTML = adv.map(a=>'• '+a).join('<br>');
-      });
-    }
-
-    // ----------------- Water control -----------------
-    function manualWater(){
-      // create a command object in DB that ESP32 listens for
-      const target = parseFloat(document.getElementById('autoStop').value) || 98;
-      const cmd = {type:'manual',action:'water',targetMoisture:target,ts:Date.now()};
-      db.ref('commands/pump').set(cmd).then(()=>{
-        log('Manual watering started until '+target+'%');
-      });
-    }
-
-    function toggleAutoMode(enabled){
-      db.ref('autoMode').set(enabled).then(()=>{
-        log('Auto mode '+(enabled?'enabled':'disabled'));
-        if(enabled) startAutoWatcher();
-      });
-    }
-
-    let autoWatcherInterval = null;
-    function startAutoWatcher(){
-      if(autoWatcherInterval) clearInterval(autoWatcherInterval);
-      autoWatcherInterval = setInterval(()=>{
-        db.ref('autoMode').once('value').then(snap=>{
-          if(!snap.val()) return; // not enabled
-          db.ref('sensors/moisture').once('value').then(msnap=>{
-            const m = msnap.val();
-            const startThreshold = parseFloat(document.getElementById('autoStart').value) || 30;
-            const stopThreshold = parseFloat(document.getElementById('autoStop').value) || 98;
-            if(m !== null && m < startThreshold){
-              // issue command
-              const cmd = {type:'auto',action:'water',targetMoisture:stopThreshold,ts:Date.now()};
-              db.ref('commands/pump').set(cmd).then(()=> log('Auto watering initiated (moisture '+m+' < '+startThreshold+')'));
-            }
-          });
-        });
-      },5000);
-    }
-
-    // Pump status watcher - reflect in UI
-    db.ref('pumpStatus').on('value', snap=>{
-      const s = snap.val();
-      document.getElementById('pumpStatus').textContent = s?String(s).toUpperCase():'OFF';
-      if(s) log('Pump: '+s);
+  function renderSuggestions(){
+    const ul=document.getElementById('suggestions');ul.innerHTML='';
+    currentSuggestions.forEach(name=>{
+      const li=document.createElement('li');li.textContent=name;li.onclick=()=>selectSuggestion(name,li);ul.appendChild(li);
     });
+    document.getElementById('suggestionConfirm').style.display='block';
+  }
 
-    // selectedPlant watcher
-    db.ref('selectedPlant').on('value', snap=>{
-      const p = snap.val();
-      document.getElementById('selectedPlantDisplay').textContent = p||'No plant selected';
-      document.getElementById('monitoredPlant').textContent = p||'--';
+  function selectSuggestion(name,el){
+    selectedSuggestion=name;
+    document.querySelectorAll('#suggestions li').forEach(li=>li.style.borderColor='#e6eef9');
+    el.style.borderColor='#2b8aef';
+  }
+
+  function confirmSelectedSuggestion(){
+    if(!selectedSuggestion){alert('Select a plant first');return;}
+    db.ref('selectedPlant').set(selectedSuggestion).then(()=>{
+      log('Selected: '+selectedSuggestion);
+      document.getElementById('selectedPlantDisplay').textContent=selectedSuggestion;
+      document.getElementById('monitoredPlant').textContent=selectedSuggestion;
+      goTo('health');
     });
+  }
 
-    // simple logger
-    function log(msg){
-      const box = document.getElementById('logBox');
-      const line = document.createElement('div'); line.textContent = new Date().toLocaleTimeString()+ ' — '+msg; box.prepend(line);
-    }
+  // Already planted flow
+  function filterPlants(){
+    const q=document.getElementById('plantSearch').value.toLowerCase();
+    const dd=document.getElementById('plantDropdown');dd.innerHTML='';
+    plants.filter(p=>p.toLowerCase().includes(q)).forEach(p=>{
+      const o=document.createElement('option');o.value=p;o.textContent=p;dd.appendChild(o);
+    });
+  }
 
-    // start auto watcher if autoMode true on load
-    db.ref('autoMode').once('value').then(snap=>{ if(snap.val()) startAutoWatcher(); });
+  function confirmSelectedFromDropdown(){
+    const val=document.getElementById('plantDropdown').value||document.getElementById('plantSearch').value;
+    if(!val){alert('Select a plant');return;}
+    db.ref('selectedPlant').set(val).then(()=>{
+      log('Manual selection: '+val);
+      document.getElementById('selectedPlantDisplay').textContent=val;
+      document.getElementById('monitoredPlant').textContent=val;
+      goTo('health');
+    });
+  }
 
-    // update selected plant UI on load
-    db.ref('selectedPlant').once('value').then(snap=>{ if(snap.val()) { document.getElementById('selectedPlantDisplay').textContent = snap.val(); document.getElementById('monitoredPlant').textContent = snap.val(); } });
+  // ----------------- Advice -----------------
+  function evaluateAdvice(){
+    db.ref('selectedPlant').once('value').then(snap=>{
+      const plant=snap.val();
+      document.getElementById('monitoredPlant').textContent=plant||'--';
+      if(!plant){document.getElementById('adviceBox').textContent='No plant selected.';return;}
+      const t=latestSensors.temperature??0,h=latestSensors.humidity??0,l=latestSensors.light??0,m=latestSensors.soil??0;
+      const adv=[];
+      if(m<30)adv.push('Soil is dry — water the plant.');
+      else if(m>85)adv.push('Soil moisture is high — wait before watering.');
+      else adv.push('Soil moisture is good.');
+      if(t<15)adv.push('Temperature is low — keep warmer.');
+      else if(t>35)adv.push('Temperature high — provide shade.');
+      if(l<200)adv.push('Low light — move to bright area.');
+      else if(l>8000)adv.push('Too bright — partial shade.');
+      if(h<30)adv.push('Low humidity — mist leaves.');
+      document.getElementById('adviceBox').innerHTML=adv.map(a=>'• '+a).join('<br>');
+    });
+  }
 
-    // initial UI
-    goTo('home');
+  // ----------------- Pump control -----------------
+  function manualWater(){
+    db.ref('pump/status').set('ON').then(()=>log('Manual watering started.'));
+    setTimeout(()=>db.ref('pump/status').set('OFF'),5000); // stop after 5s safety
+  }
 
-    // small helper to ensure dropdown populated and search works on load
-    filterPlants();
-  </script>
-</body>
-</html>
+  function toggleAutoMode(enabled){
+    db.ref('pump/autoMode').set(enabled).then(()=>log('Auto mode '+(enabled?'enabled':'disabled')));
+  }
 
+  db.ref('pump/status').on('value',snap=>{
+    const s=snap.val()||'OFF';
+    document.getElementById('pumpStatus').textContent=s.toUpperCase();
+    log('Pump: '+s);
+  });
 
+  db.ref('selectedPlant').on('value',snap=>{
+    const p=snap.val();
+    document.getElementById('selectedPlantDisplay').textContent=p||'No plant selected';
+    document.getElementById('monitoredPlant').textContent=p||'--';
+  });
 
+  function log(msg){
+    const box=document.getElementById('logBox');
+    const line=document.createElement('div');
+    line.textContent=new Date().toLocaleTimeString()+' — '+msg;
+    box.prepend(line);
+  }
+
+  goTo('home');
+  filterPlants();
+</script>
